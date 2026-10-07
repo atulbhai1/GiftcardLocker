@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct CardView: View {
     @Bindable var card: GiftCard
@@ -84,7 +85,7 @@ struct CardView: View {
                 
             } message: {
                 Text("Are you sure you want to delete card ending in \(card.last4)?")
-
+            }
     }
 }
 

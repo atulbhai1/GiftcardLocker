@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main struct MyApp: App {
     init(){
@@ -20,5 +21,6 @@ import SwiftUI
         WindowGroup {
             HomeView()
         }
+        .modelContainer(for: GiftCard.self)
     }
 }

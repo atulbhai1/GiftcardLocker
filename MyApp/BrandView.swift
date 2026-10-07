@@ -1,36 +1,41 @@
 import SwiftUI
+import SwiftData
 
 struct BrandView: View {
-    var brand: Brand
+    var brandName: String
+    @Query private var cards: [GiftCard]
+
+    init(brandName: String) {
+        self.brandName = brandName
+        _cards = Query(filter: #Predicate<GiftCard> { $0.retailer == brandName })
+    }
+
     var body: some View {
-        let cards = brand.cards
-        Text("\(brand.name) Giftcards")
+        let total = cards.reduce(Decimal(0)) { $0 + $1.balance }
+        Text("\(brandName) Giftcards")
             .font(.largeTitle).bold().multilineTextAlignment(.center).padding(20)
         Text("Number of Cards: \(cards.count)")
             .font(.title)
             .multilineTextAlignment(.center)
-        Text("Total Balance: $\(brand.total.formatted())")
+        Text("Total Balance: \(total.formatted(.currency(code: "USD")))")
             .font(.title)
             .multilineTextAlignment(.center)
         ScrollView {
             LazyVStack(alignment: .leading) {
-                ForEach(cards, id: \.last4) { card in
+                ForEach(cards) { card in
                     HStack{
                         Spacer()
-                        NavigationLink(destination:CardAddView()){
-                            Text(card.last4)
+                        NavigationLink(destination:CardView(card: card)){
+                            Text("Card ending in \(card.last4)  \(card.balance.formatted(.currency(code: "USD")))")
                         }.buttonStyle(brandScrollButtonStyle())
                         Spacer()
                     }
                 }
             }
         }
-        VStack{
-            Text("Hi")
-        }
     }
 }
 
 #Preview {
-    BrandView(brand: Brand(cards: [], name: "Sample"))
+    BrandView(brandName: "Sample")
 }
