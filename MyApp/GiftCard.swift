@@ -61,3 +61,47 @@ func loadOrCreateKey() throws -> SymmetricKey {
     }
     return key
 }
+
+class Brand{
+    var cards: [GiftCard]
+    var name: String
+    var total: Decimal
+    init(cards: [GiftCard], name: String){
+        self.name = name
+        self.cards = cards
+        self.total = 0.00
+        for card in cards {
+            total += card.balance
+        }
+    }
+    
+    func add(card: GiftCard){
+        self.cards.append(card)
+        self.total += card.balance
+    }
+}
+
+func BrandMaker(cards: [GiftCard]) throws -> [Brand]{
+    //Given giftcards list, return brands!!!
+    
+    var brands = Array<Brand>()
+    
+    for card in cards{
+        var caughtHim = false
+        var cardbrand = card.retailer
+        for brand in brands {
+            if brand.name == cardbrand{
+                brand.add(card: card)
+                caughtHim = true
+                break
+            }
+        }
+        //The above did for if brand was in the list, if not in list, need NEW brand
+        if !caughtHim{
+            let newBrand = Brand(cards: [card], name: card.retailer)
+            brands.append(newBrand)
+        }
+        //Now have dealt with all, loop again!!!
+    }
+    return brands
+}
