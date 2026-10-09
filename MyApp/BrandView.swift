@@ -7,7 +7,7 @@ struct BrandView: View {
 
     init(brandName: String) {
         self.brandName = brandName
-        _cards = Query(filter: #Predicate<GiftCard> { $0.retailer == brandName })
+        _cards = Query(filter: #Predicate<GiftCard> { $0.retailer == brandName && !$0.isDeleted })
     }
 
     var body: some View {

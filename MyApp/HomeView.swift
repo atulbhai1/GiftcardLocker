@@ -37,9 +37,7 @@ struct HomeView: View {
                 .tint(.blue)
                 .quickLookPreview($historyFileURL)
                 
-                Button(action: {
-                    print("Look at em deleted cards")
-                }) {
+                NavigationLink(destination: DeletedCardExplorer()) {
                     Label("Deleted Cards", systemImage: "trash")
                 }
                 .labelStyle(.iconOnly)

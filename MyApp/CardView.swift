@@ -34,6 +34,9 @@ struct CardView: View {
     @State private var amountSpent: Decimal = 0.0
     @State private var balanceBeforeEdit: Decimal = 0.0
     @State private var historyFileURL: URL?
+    @State private var revealedNumber: String?
+    @State private var revealedPin: String?
+    @State private var barcodeImage: UIImage?
 
     private var isBalanceAlertPresented: Binding<Bool> {
         Binding(
@@ -51,9 +54,18 @@ struct CardView: View {
         try? text.write(to: url, atomically: true, encoding: .utf8)
         historyFileURL = url
     }
+    func refreshRevealedFields() {
+        revealedNumber = try? card.revealNumber()
+        revealedPin = try? card.revealPin()
+        if let revealedNumber {
+            barcodeImage = barcodeMaker(cardNumber: revealedNumber)
+        }
+    }
+
     var body: some View {
         Text("Card Ending with \(card.last4)")
             .font(.largeTitle).bold().multilineTextAlignment(.center).padding(20)
+            .onAppear(perform: refreshRevealedFields)
         Text("Retailer: \(card.retailer)")
             .font(.title)
             .multilineTextAlignment(.center)
@@ -63,14 +75,14 @@ struct CardView: View {
         Text("Balance: \(card.balance.formatted(.currency(code: "USD")))")
             .font(.title)
             .multilineTextAlignment(.center)
-        Text("Card Number: \((try? card.revealNumber()) ?? "Unavailable")")
+        Text("Card Number: \(revealedNumber ?? "Unavailable")")
             .font(.title)
             .multilineTextAlignment(.center)
-        Text("Card Pin: \((try? card.revealPin()) ?? "Unavailable")")
+        Text("Card Pin: \(revealedPin ?? "Unavailable")")
             .font(.title)
             .multilineTextAlignment(.center)
-        if let number = try? card.revealNumber() {
-            Image(uiImage: barcodeMaker(cardNumber: number))
+        if let barcodeImage {
+            Image(uiImage: barcodeImage)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .padding()
@@ -87,12 +99,12 @@ struct CardView: View {
                 case .modifyChoice:
                     Button("Enter New Balance", role: .destructive){
                         balanceBeforeEdit = card.balance
-                        DispatchQueue.main.async {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             activeBalanceAlert = .newBalance
                         }
                     }
                     Button("Enter Amount Spent", role: .destructive){
-                        DispatchQueue.main.async {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             activeBalanceAlert = .amountSpent
                         }
                     }
@@ -135,7 +147,8 @@ struct CardView: View {
             .alert("Delete Confirmation", isPresented: $showDeleteAlert){
                 Button("Delete", role: .destructive){
                     card.add_record(record: Record(type: Record.DELETED, beforeBalance: card.balance, afterBalance: card.balance, cardLast4: card.last4))
-                    modelContext.delete(card)
+                    card.isDeleted = true
+                    modelContext.insert(DeletedGiftCard(card: card))
                     dismiss()
                 }
                 Button("Cancel", role: .cancel){}

@@ -21,6 +21,6 @@ import SwiftData
         WindowGroup {
             HomeView()
         }
-        .modelContainer(for: GiftCard.self)
+        .modelContainer(for: [GiftCard.self, DeletedGiftCard.self])
     }
 }

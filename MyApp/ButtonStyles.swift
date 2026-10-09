@@ -52,6 +52,6 @@ struct modifyOrDeleteButtonStyle: ButtonStyle{
         configuration.label
             .font(.title)
             .foregroundStyle(.blue)
-            .padding()
+            .padding(10)
     }
 }

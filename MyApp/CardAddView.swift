@@ -20,6 +20,7 @@ struct CardAddView: View{
     @State private var notSaved = false
     @State private var showAlert = false
     @State private var goToConfirmation = false
+    @State private var errorMessage = ""
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     var body : some View{
@@ -127,7 +128,13 @@ struct CardAddView: View{
                         notSaved = false
                         do {
                             try addCard(context: modelContext, cardBalance: balance, cardNumber: cardNumber, cardPin: cardPin, retailer: retailer, otherRetailer: customRetailer, purchasedFrom: purchasedFrom, customPurchasedFrom: otherPurchasedFrom)
-                        } catch {
+                        }
+                        catch let error as CocoaError where error.code == .formatting {
+                            notSaved = true
+                            errorMessage = "Ensure you entered input for Retailer, Card Origin, and the Card Number!!!"
+                        }
+                        catch {
+                            errorMessage = "Something went wrong while saving your card. Please try again."
                             notSaved = true
                         }
                         if notSaved{
@@ -146,7 +153,7 @@ struct CardAddView: View{
         .alert("Couldn't Save Card", isPresented: $showAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Something went wrong while saving your card. Please try again.")
+            Text(errorMessage)
         }
     }
 }
@@ -158,6 +165,9 @@ struct CardAddView: View{
 func addCard(context: ModelContext, cardBalance: Decimal, cardNumber: String, cardPin: String, retailer: String, otherRetailer: String, purchasedFrom: String, customPurchasedFrom: String) throws {
     let finalRetailer = (retailer != "Other") ? retailer : otherRetailer
     let finalPurchasedFrom = (purchasedFrom != "Other") ? purchasedFrom : customPurchasedFrom
+    if (finalRetailer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || finalPurchasedFrom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cardNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty){
+        throw CocoaError(.formatting)
+    }
     let card = try GiftCard(retailer: finalRetailer, number: cardNumber, balance: cardBalance, pin: cardPin, purchasedFrom: finalPurchasedFrom)
     context.insert(card)
 }

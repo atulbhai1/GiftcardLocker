@@ -23,6 +23,7 @@ final class GiftCard{
     var numberCiphertext: Data
     var pinCipherText: Data
     var history: [Record] = Array<Record>()
+    var isDeleted: Bool = false
     
     
     init(retailer: String, number: String, balance: Decimal, pin: String, purchasedFrom: String) throws {
@@ -53,7 +54,7 @@ final class GiftCard{
 }
 
 func fetchAllGiftCards(context: ModelContext) throws -> [GiftCard] {
-    let descriptor = FetchDescriptor<GiftCard>()
+    let descriptor = FetchDescriptor<GiftCard>(predicate: #Predicate { !$0.isDeleted })
     return try context.fetch(descriptor)
 }
 
@@ -154,6 +155,8 @@ func OriginMaker(cards: [GiftCard]) throws -> [String]{
 
 
 
+private let barcodeRenderContext = CIContext()
+
 func barcodeMaker(cardNumber: String) -> UIImage {
     let inputMessage = Data(cardNumber.utf8)
     let barcodeGenerator = CIFilter.code128BarcodeGenerator()
@@ -164,8 +167,7 @@ func barcodeMaker(cardNumber: String) -> UIImage {
     // Scale up from the generator's 1pt-per-module output so bars aren't razor-thin,
     // then rasterize to a CGImage since UIImage(ciImage:) often fails to render in SwiftUI.
     let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: 3, y: 3))
-    let context = CIContext()
-    guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else {
+    guard let cgImage = barcodeRenderContext.createCGImage(scaledImage, from: scaledImage.extent) else {
         return UIImage()
     }
     return UIImage(cgImage: cgImage)
@@ -182,6 +184,8 @@ final class Record{
     static let CREATED = "CREATED"
     static let TRANSACTION = "TRANSACTION"
     static let DELETED = "DELETED"
+    static let FDELETED = "FOREVERDELETED"
+    static let RESTORED = "RESTORED"
     
     init(type: String, beforeBalance: Decimal, afterBalance: Decimal, cardLast4: String) {
         self.type = type
@@ -200,6 +204,12 @@ final class Record{
         else if (type == Record.DELETED){
             self.message = "Card ending in \(cardLast4) was deleted at \(displayTime)."
         }
+        else if (type == Record.FDELETED){
+            self.message = "Card ending in \(cardLast4) was forever deleted at \(displayTime)."
+        }
+        else if(type == Record.RESTORED){
+            self.message = "Card ending in \(cardLast4) was restored at \(displayTime)."
+        }
         else{
             self.message = "Somthing unexpected was recorded at \(displayTime)."
         }
@@ -213,7 +223,7 @@ func fetchAllRecords(context: ModelContext) throws -> [Record] {
 
 @Model
 final class DeletedGiftCard{
-    var giftCard: GiftCard
+    @Relationship(deleteRule: .nullify) var giftCard: GiftCard
     var deletionTime: Date
     
     init(card: GiftCard) {
@@ -232,5 +242,6 @@ func autodeleteDeletedGiftCards(deletedCards: [DeletedGiftCard], context: ModelC
     guard let cutoffDate = Calendar.current.date(byAdding: .day, value: -60, to: now) else { return }
     for deletedCard in deletedCards where deletedCard.deletionTime < cutoffDate {
         context.delete(deletedCard)
+        context.delete(deletedCard.giftCard)
     }
 }
