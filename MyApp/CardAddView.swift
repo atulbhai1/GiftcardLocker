@@ -168,6 +168,6 @@ func addCard(context: ModelContext, cardBalance: Decimal, cardNumber: String, ca
     if (finalRetailer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || finalPurchasedFrom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || cardNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty){
         throw CocoaError(.formatting)
     }
-    let card = try GiftCard(retailer: finalRetailer, number: cardNumber, balance: cardBalance, pin: cardPin, purchasedFrom: finalPurchasedFrom)
+    let card = try GiftCard(retailer: finalRetailer.trimmingCharacters(in: .whitespacesAndNewlines), number: cardNumber.trimmingCharacters(in: .whitespacesAndNewlines), balance: cardBalance, pin: cardPin.trimmingCharacters(in: .whitespacesAndNewlines), purchasedFrom: finalPurchasedFrom.trimmingCharacters(in: .whitespacesAndNewlines))
     context.insert(card)
 }
