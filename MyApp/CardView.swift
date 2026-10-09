@@ -7,16 +7,50 @@
 
 import SwiftUI
 import SwiftData
+import QuickLook
+
+enum BalanceAlert: Identifiable {
+    case modifyChoice
+    case newBalance
+    case amountSpent
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .modifyChoice: return "Modify Balance"
+        case .newBalance: return "New Balance Entry"
+        case .amountSpent: return "Amount Spent Entry"
+        }
+    }
+}
 
 struct CardView: View {
     @Bindable var card: GiftCard
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @State private var showModifyAlert = false
-    @State private var showEnterNewBalanceAlert = false
-    @State private var showAmountSpentAlert = false
+    @State private var activeBalanceAlert: BalanceAlert?
     @State private var showDeleteAlert = false
     @State private var amountSpent: Decimal = 0.0
+    @State private var balanceBeforeEdit: Decimal = 0.0
+    @State private var historyFileURL: URL?
+
+    private var isBalanceAlertPresented: Binding<Bool> {
+        Binding(
+            get: { activeBalanceAlert != nil },
+            set: { if !$0 { activeBalanceAlert = nil } }
+        )
+    }
+
+    func previewHistory() {
+        let text = card.history
+            .sorted { $0.time < $1.time }
+            .map { $0.message }
+            .joined(separator: "\n")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("Card-\(card.last4)-History.txt")
+        try? text.write(to: url, atomically: true, encoding: .utf8)
+        historyFileURL = url
+    }
     var body: some View {
         Text("Card Ending with \(card.last4)")
             .font(.largeTitle).bold().multilineTextAlignment(.center).padding(20)
@@ -42,42 +76,65 @@ struct CardView: View {
                 .padding()
         }
         Button("Change Balance", systemImage: "square.and.pencil"){
-            showModifyAlert = true
+            activeBalanceAlert = .modifyChoice
         }.buttonStyle(modifyOrDeleteButtonStyle())
-            .alert("Modify Balance", isPresented: $showModifyAlert){
-                Button("Enter New Balance", role: .destructive){
-                    showEnterNewBalanceAlert = true
+            .alert(
+                activeBalanceAlert?.title ?? "",
+                isPresented: isBalanceAlertPresented,
+                presenting: activeBalanceAlert
+            ) { alert in
+                switch alert {
+                case .modifyChoice:
+                    Button("Enter New Balance", role: .destructive){
+                        balanceBeforeEdit = card.balance
+                        DispatchQueue.main.async {
+                            activeBalanceAlert = .newBalance
+                        }
+                    }
+                    Button("Enter Amount Spent", role: .destructive){
+                        DispatchQueue.main.async {
+                            activeBalanceAlert = .amountSpent
+                        }
+                    }
+                    Button("Cancel", role: .cancel){}
+                case .newBalance:
+                    TextField("0.00", value: $card.balance, format: .number)
+                        .keyboardType(.numberPad)
+                    Button("OK"){
+                        card.add_record(record: Record(type: Record.TRANSACTION, beforeBalance: balanceBeforeEdit, afterBalance: card.balance, cardLast4: card.last4))
+                    }
+                case .amountSpent:
+                    TextField("0.00", value: $amountSpent, format: .number)
+                        .keyboardType(.numberPad)
+                    Button("OK"){
+                        let before = card.balance
+                        card.balance = card.balance - amountSpent
+                        card.add_record(record: Record(type: Record.TRANSACTION, beforeBalance: before, afterBalance: card.balance, cardLast4: card.last4))
+                    }
                 }
-                Button("Enter Amount Spent", role: .destructive){
-                    showAmountSpentAlert = true
+            } message: { alert in
+                switch alert {
+                case .modifyChoice:
+                    Text("How do you want to modify the balance?")
+                case .newBalance:
+                    Text("Enter New Balance")
+                case .amountSpent:
+                    Text("Enter Amount Spent")
                 }
-                Button("Cancel", role: .cancel){}
-
-            } message: {
-                Text("How do you want to modify the balance?")
-
-            } .alert("New Balance Entry", isPresented: $showEnterNewBalanceAlert){
-                TextField("0.00", value: $card.balance, format: .number)
-                    .keyboardType(.numberPad)
-            } message: {
-                Text("Enter New Balance")
-
-            } .alert("Amount Spent Entry", isPresented: $showAmountSpentAlert){
-                TextField("0.00", value: $amountSpent, format: .number)
-                    .keyboardType(.numberPad)
-                Button("Ok"){
-                    card.balance = card.balance - amountSpent
-                }
-            } message: {
-                Text("Enter Amount Spent")
             }
 
+
+        Button("View History", systemImage: "clock"){
+            previewHistory()
+        }.buttonStyle(modifyOrDeleteButtonStyle())
+            .quickLookPreview($historyFileURL)
 
         Button("Delete", systemImage: "trash"){
             showDeleteAlert = true
         }.buttonStyle(modifyOrDeleteButtonStyle())
             .alert("Delete Confirmation", isPresented: $showDeleteAlert){
                 Button("Delete", role: .destructive){
+                    card.add_record(record: Record(type: Record.DELETED, beforeBalance: card.balance, afterBalance: card.balance, cardLast4: card.last4))
                     modelContext.delete(card)
                     dismiss()
                 }

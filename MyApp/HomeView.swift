@@ -36,11 +36,22 @@ struct HomeView: View {
                 .buttonStyle(.bordered)
                 .tint(.blue)
                 .quickLookPreview($historyFileURL)
+                
+                Button(action: {
+                    print("Look at em deleted cards")
+                }) {
+                    Label("Deleted Cards", systemImage: "trash")
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.bordered)
+                .tint(.blue)
+                
             }
         }
         .onAppear {
             deletedGiftCards = (try? fetchAllDeletedCards(context: modelContext)) ?? []
             autodeleteDeletedGiftCards(deletedCards: deletedGiftCards, context: modelContext)
+            deletedGiftCards = (try? fetchAllDeletedCards(context: modelContext)) ?? []//refresh after deletions!!!
         }
     }
 }
