@@ -52,16 +52,16 @@ struct CardView: View {
                     showAmountSpentAlert = true
                 }
                 Button("Cancel", role: .cancel){}
-                
+
             } message: {
                 Text("How do you want to modify the balance?")
-                
+
             } .alert("New Balance Entry", isPresented: $showEnterNewBalanceAlert){
                 TextField("0.00", value: $card.balance, format: .number)
                     .keyboardType(.numberPad)
             } message: {
                 Text("Enter New Balance")
-                
+
             } .alert("Amount Spent Entry", isPresented: $showAmountSpentAlert){
                 TextField("0.00", value: $amountSpent, format: .number)
                     .keyboardType(.numberPad)
@@ -71,8 +71,8 @@ struct CardView: View {
             } message: {
                 Text("Enter Amount Spent")
             }
-            
-        
+
+
         Button("Delete", systemImage: "trash"){
             showDeleteAlert = true
         }.buttonStyle(modifyOrDeleteButtonStyle())
@@ -82,7 +82,7 @@ struct CardView: View {
                     dismiss()
                 }
                 Button("Cancel", role: .cancel){}
-                
+
             } message: {
                 Text("Are you sure you want to delete card ending in \(card.last4)?")
             }
